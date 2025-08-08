@@ -16,15 +16,25 @@ import { Module } from '@nestjs/common';
         imports: [ConfigModule],
         inject: [ConfigService],
         useFactory: (config: ConfigService) => ({
-          type: 'postgres',
-          host: config.get('DB_HOST'),
-          port: config.get<number>('DB_PORT'),
-          username: config.get('DB_USERNAME'),
-          password: config.get('DB_PASSWORD'),
-          database: config.get('DB_DATABASE'),
-          entities: [__dirname + '/**/*.entity{.ts,.js}'], // carga todas las entidades
-          synchronize: false, // controla si TypeORM sincroniza el esquema automáticamente
-        }),
+            type: 'postgres',
+            host: config.get<string>('DB_HOST'),
+            port: config.get<number>('DB_PORT'),
+            username: config.get<string>('DB_USERNAME'),
+            password: config.get<string>('DB_PASSWORD'),
+            database: config.get<string>('DB_DATABASE'),
+            // ===> fuerza SSL/TLS
+            ssl: {
+              rejectUnauthorized: false,  // acepta el cert de Let's Encrypt de Render
+            },
+            // a veces necesario pasarlo también aquí:
+            extra: {
+              ssl: {
+                rejectUnauthorized: false,
+              },
+            },
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: false,
+          }),
       }),
       ClienteModule,
       PaisesModule,
