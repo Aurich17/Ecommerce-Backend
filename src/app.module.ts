@@ -1,13 +1,13 @@
 /* eslint-disable prettier/prettier */
-import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClienteModule } from './clientes/cliente.module';
 import { PaisesModule } from './paises/paises.module';
 import { ProvinciasModule } from './provincias/provincias.module';
 import { CiudadesModule } from './ciudades/ciudades.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -22,7 +22,7 @@ import { CiudadesModule } from './ciudades/ciudades.module';
           username: config.get('DB_USERNAME'),
           password: config.get('DB_PASSWORD'),
           database: config.get('DB_DATABASE'),
-          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          entities: [__dirname + '/**/*.entity{.ts,.js}'], // carga todas las entidades
           synchronize: false, // controla si TypeORM sincroniza el esquema automáticamente
         }),
       }),
@@ -30,7 +30,6 @@ import { CiudadesModule } from './ciudades/ciudades.module';
       PaisesModule,
       ProvinciasModule,
       CiudadesModule
-      // PaisesModule,
       // ProvinciasModule,
       // CiudadesModule,
       // OcupacionesModule,
