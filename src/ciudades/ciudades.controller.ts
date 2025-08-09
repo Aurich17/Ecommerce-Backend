@@ -7,6 +7,7 @@ import {
   Put,
   Delete,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { CiudadesService } from './ciudades.service';
 import { Ciudad } from './ciudad.entity';
@@ -40,8 +41,13 @@ export class CiudadesController {
     description: 'Listado de ciudades',
     type: [Ciudad],
   })
-  findAll(): Promise<Ciudad[]> {
-    return this.servicio.findAll();
+  findAll(
+    @Query('provinciaId') provinciaId?: string,
+    @Query('includeProvincia') includeProvincia?: string,
+  ) {
+    const pid = provinciaId ? Number(provinciaId) : undefined;
+    const withRel = includeProvincia === 'true';
+    return this.servicio.findAll(pid, withRel);
   }
 
   @Get(':id')

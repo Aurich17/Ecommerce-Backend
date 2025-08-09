@@ -1,8 +1,15 @@
-// src/paises/pais.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+// src/ciudades/ciudad.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+  JoinColumn,
+} from 'typeorm';
 import { Provincia } from '../provincias/provincia.entity';
 
-@Entity({ name: 'paises' })
+@Entity({ name: 'ciudades' })
 export class Ciudad {
   @PrimaryGeneratedColumn()
   id: number;
@@ -10,6 +17,14 @@ export class Ciudad {
   @Column({ type: 'text' })
   nombre: string;
 
-  @OneToMany(() => Provincia, (provincia) => provincia.pais)
-  provincias: Provincia[];
+  // FK explícita a provincias.id (columna provincia_id)
+  @Index()
+  @Column({ name: 'provincia_id', type: 'int' })
+  provinciaId: number;
+
+  @ManyToOne(() => Provincia, (provincia) => provincia.ciudades, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'provincia_id' }) // ← importantísimo para enlazar con la columna
+  provincia: Provincia;
 }

@@ -1,50 +1,51 @@
-/* eslint-disable prettier/prettier */
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClienteModule } from './clientes/cliente.module';
 import { PaisesModule } from './paises/paises.module';
 import { ProvinciasModule } from './provincias/provincias.module';
 import { CiudadesModule } from './ciudades/ciudades.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Module } from '@nestjs/common';
+import { GenerosModule } from './generos/genero.module';
+import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
 
 @Module({
   imports: [
-      ConfigModule.forRoot({ isGlobal: true }),   // carga .env globalmente
-      TypeOrmModule.forRootAsync({
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-            type: 'postgres',
-            host: config.get<string>('DB_HOST'),
-            port: config.get<number>('DB_PORT'),
-            username: config.get<string>('DB_USERNAME'),
-            password: config.get<string>('DB_PASSWORD'),
-            database: config.get<string>('DB_DATABASE'),
-            // ===> fuerza SSL/TLS
-            ssl: {
-              rejectUnauthorized: false,  // acepta el cert de Let's Encrypt de Render
-            },
-            // a veces necesario pasarlo también aquí:
-            extra: {
-              ssl: {
-                rejectUnauthorized: false,
-              },
-            },
-            entities: [__dirname + '/**/*.entity{.ts,.js}'],
-            synchronize: false,
-          }),
-      }),
-      ClienteModule,
-      PaisesModule,
-      ProvinciasModule,
-      CiudadesModule
-      // ProvinciasModule,
-      // CiudadesModule,
-      // OcupacionesModule,
-      // GenerosModule,
-    ],
+    ConfigModule.forRoot({ isGlobal: true }), // carga .env
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        // parsea manualmente la var de entorno (siempre viene como string)
+        const sslEnv = config.get<string>('DB_SSL', 'false');
+        const sslEnabled = sslEnv.toLowerCase() === 'true';
+
+        return {
+          type: 'postgres',
+          host: config.get<string>('DB_HOST'),
+          port: parseInt(config.get<string>('DB_PORT', '5432'), 10),
+          username: config.get<string>('DB_USERNAME'),
+          password: config.get<string>('DB_PASSWORD'),
+          database: config.get<string>('DB_DATABASE'),
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          synchronize: false,
+          // si sslEnabled es true -> fuerza TLS, si no -> desactívalo
+          ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+          extra: {
+            ssl: sslEnabled ? { rejectUnauthorized: false } : false,
+          },
+        };
+      },
+    }),
+    ClienteModule,
+    PaisesModule,
+    ProvinciasModule,
+    CiudadesModule,
+    GenerosModule,
+    OcupacionesModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

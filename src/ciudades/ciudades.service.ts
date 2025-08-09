@@ -21,8 +21,19 @@ export class CiudadesService {
     return this.repo.save(ciudad);
   }
 
-  findAll(): Promise<Ciudad[]> {
-    return this.repo.find({ relations: ['provincia'] });
+  findAll(provinciaId?: number, includeProvincia = false) {
+    if (includeProvincia) {
+      return this.repo.find({
+        where: provinciaId ? { provinciaId } : {},
+        relations: ['provincia'],
+        order: { nombre: 'ASC' },
+      });
+    }
+    return this.repo.find({
+      where: provinciaId ? { provinciaId } : {},
+      select: { id: true, nombre: true, provinciaId: true }, // ← lean
+      order: { nombre: 'ASC' },
+    });
   }
 
   async findOne(id: number): Promise<Ciudad> {

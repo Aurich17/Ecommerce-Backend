@@ -24,6 +24,6 @@ export class Provincia {
   @Column({ type: 'text' })
   nombre: string;
 
-  @OneToMany(() => Ciudad, (ciudad) => ciudad.provincias)
+  @OneToMany(() => Ciudad, (ciudad) => ciudad.provincia)
   ciudades: Ciudad[];
 }
