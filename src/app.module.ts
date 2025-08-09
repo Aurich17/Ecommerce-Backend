@@ -10,6 +10,8 @@ import { ProvinciasModule } from './provincias/provincias.module';
 import { CiudadesModule } from './ciudades/ciudades.module';
 import { GenerosModule } from './generos/genero.module';
 import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
+import { AuthModule } from './auth/auth.module';
+import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
     CiudadesModule,
     GenerosModule,
     OcupacionesModule,
+    AuthModule,
+    LandingEncabezadoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,45 +1,36 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   Controller,
-  Get,
   Post,
   Body,
-  Param,
-  Put,
-  Delete,
+  UsePipes,
+  ValidationPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { ClienteService } from './cliente.service';
-import { Cliente } from './cliente.entity';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiBody,
-} from '@nestjs/swagger';
-import { CreateClienteCompletoDto } from './dto/create-cliente.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { RegistroCompletoDto } from './dto/registro-completo.dto';
 
+@ApiTags('clientes')
+@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 @Controller('clientes')
 export class ClienteController {
   constructor(private readonly servicio: ClienteService) {}
 
-  @Post('completo')
-  @ApiOperation({
-    summary: 'Registrar cliente completo (invoca el PROC plpgsql)',
-  })
-  @ApiBody({ type: CreateClienteCompletoDto })
+  @Post('registro-completo') // ← usa UNA sola ruta (o duplica a propósito)
+  @ApiOperation({ summary: 'Registrar cliente completo (PL/pgSQL)' })
+  @ApiBody({ type: RegistroCompletoDto })
   @ApiResponse({
     status: 201,
     description: 'Cliente creado y social security generado',
     schema: {
       properties: {
-        social_security: { type: 'string', example: 'CC-001-234' },
+        social_security: { type: 'string', example: 'CC-100-000' },
       },
     },
   })
-  async registrarCompleto(
-    @Body() dto: CreateClienteCompletoDto,
-  ): Promise<{ social_security: string }> {
-    return this.servicio.registrarCompleto(dto);
+  async registrar(@Body() body: RegistroCompletoDto) {
+    const result = await this.servicio.registrarCompleto(body);
+    return { message: 'Cliente registrado correctamente', ...result };
   }
 }
