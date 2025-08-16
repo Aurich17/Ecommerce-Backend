@@ -9,6 +9,15 @@ import { TestimonialsService } from './services/testimonials.service';
 import { AudiencesController } from './controllers/audiences.controller';
 import { HowItWorksController } from './controllers/howitworks.controller';
 import { TestimonialsController } from './controllers/testimonials.controller';
+import { LandingFaq } from './entities/landing-faq.entity';
+import { LandingFeature } from './entities/landing-feature.entity';
+import { FaqController } from './controllers/faq.controller';
+import { FeaturesController } from './controllers/features.controller';
+import { FaqService } from './services/faq.service';
+import { FeaturesService } from './services/features.service';
+import { FooterService } from './services/footer.service';
+import { FooterController } from './controllers/footer.controller';
+import { LandingFooter } from './entities/landing-footer.entity';
 
 @Module({
   imports: [
@@ -16,13 +25,26 @@ import { TestimonialsController } from './controllers/testimonials.controller';
       LandingAudience,
       LandingHowItWorks,
       LandingTestimonial,
+      LandingFaq,
+      LandingFeature,
+      LandingFooter,
     ]),
   ],
   controllers: [
     AudiencesController,
     HowItWorksController,
     TestimonialsController,
+    FaqController,
+    FeaturesController,
+    FooterController,
   ],
-  providers: [AudiencesService, HowItWorksService, TestimonialsService],
+  providers: [
+    AudiencesService,
+    HowItWorksService,
+    TestimonialsService,
+    FaqService,
+    FeaturesService,
+    FooterService,
+  ],
 })
 export class LandingModule {}
