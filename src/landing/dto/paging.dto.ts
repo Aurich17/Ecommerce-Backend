@@ -32,4 +32,9 @@ export class PagingQueryDto {
   @IsOptional()
   @IsBooleanString()
   enabled?: string;
+
+  @ApiPropertyOptional({ example: 'true' })
+  @IsOptional()
+  @IsBooleanString()
+  activo?: string;
 }

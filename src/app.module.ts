@@ -18,6 +18,8 @@ import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { CompaniesModule } from './companies/companies.module';
 import { LandingModule } from './landing/landing.module';
+import { RequestsModule } from './requests/requests.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -61,6 +63,8 @@ import { LandingModule } from './landing/landing.module';
     ClientsModule,
     CompaniesModule,
     LandingModule,
+    RequestsModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
