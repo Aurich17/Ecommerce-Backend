@@ -15,6 +15,9 @@ import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado
 import { ImagekitModule } from './imagekit/imagekit.module';
 import { TiposModule } from './catalogs/tipos.module';
 import { UsersModule } from './users/users.module';
+import { ClientsModule } from './clients/clients.module';
+import { CompaniesModule } from './companies/companies.module';
+import { LandingModule } from './landing/landing.module';
 
 @Module({
   imports: [
@@ -55,6 +58,9 @@ import { UsersModule } from './users/users.module';
     ImagekitModule,
     TiposModule,
     UsersModule,
+    ClientsModule,
+    CompaniesModule,
+    LandingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
