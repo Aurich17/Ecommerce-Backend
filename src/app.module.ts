@@ -13,6 +13,8 @@ import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
+import { TiposModule } from './catalogs/tipos.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { ImagekitModule } from './imagekit/imagekit.module';
     AuthModule,
     LandingEncabezadoModule,
     ImagekitModule,
+    TiposModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
