@@ -6,7 +6,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: 'http://localhost:4200', // o `true` para permitir todos
+    origin: [
+      'http://localhost:4200',
+      'https://ecommerce-frontend-5vjm98vwq-devaurichs-projects.vercel.app',
+      'https://ecommerce-frontend-kohl-gamma.vercel.app',
+      // agrega tu dominio si lo usas, p. ej. 'https://api.midominio.com'
+    ], // o `true` para permitir todos
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

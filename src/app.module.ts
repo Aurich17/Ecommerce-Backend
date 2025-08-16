@@ -12,6 +12,7 @@ import { GenerosModule } from './generos/genero.module';
 import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado.module';
+import { ImagekitModule } from './imagekit/imagekit.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado
     OcupacionesModule,
     AuthModule,
     LandingEncabezadoModule,
+    ImagekitModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -59,10 +59,13 @@ export class ClienteService {
         throw new ConflictException('El email ya está registrado');
       }
       if (err?.code === '42883') {
-        // función no existe o tipos no coinciden
-        throw new BadRequestException(
-          'No se encontró la función registrar_cliente_y_retornar_ss o tipos inválidos. Verifica que exista en schema public y los casteos.',
-        );
+        const d = err?.driverError ?? err;
+        throw new BadRequestException({
+          code: d?.code,
+          message: d?.detail || d?.message,
+          hint: d?.hint,
+          where: d?.where,
+        });
       }
       throw err;
     }
