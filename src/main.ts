@@ -17,12 +17,10 @@ async function bootstrap() {
   });
   // 1) Construye la configuración de tu API
   const config = new DocumentBuilder()
-    .setTitle('Mi API E-Commerce')
-    .setDescription(
-      'Documentación de endpoints para clientes, productos, pedidos, etc.',
-    )
+    .setTitle('API')
+    .setDescription('API docs')
     .setVersion('1.0')
-    // .addTag('clientes')  // puedes agregar tags globales
+    .addBearerAuth() // esquema por defecto "bearer"
     .build();
 
   // 2) Crea el documento y expón la UI

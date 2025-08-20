@@ -1,4 +1,3 @@
-// src/auth/auth.service.ts
 import {
   Injectable,
   UnauthorizedException,
@@ -8,8 +7,10 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
-import { LoginResponse, RoleItem, MenuNode } from './auth.types';
+import { LoginResponse, RoleItem, MenuNode, JwtPayload } from './auth.types';
+import { ConfigService } from '@nestjs/config';
 
 type DbUserRow = {
   id: string;
@@ -37,7 +38,11 @@ type MenuRow = {
 
 @Injectable()
 export class AuthService {
-  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly ds: DataSource,
+    private readonly jwt: JwtService,
+    private readonly cfg: ConfigService,
+  ) {}
 
   private pickNextRoute(idRol: number | null, rolDesc: string | null): string {
     const d = (rolDesc || '').toLowerCase();
@@ -74,6 +79,83 @@ export class AuthService {
       }
     }
     return roots;
+  }
+
+  private async buildMenuFlat(idRol: number): Promise<MenuRow[]> {
+    // CTE recursiva: incluye hijos de menús permitidos; hijos heredan permisos si no tienen fila en acceso
+    return this.ds.query(
+      `
+      WITH RECURSIVE roots AS (
+        SELECT
+          m.id,
+          m.descripcion,
+          m.icono,
+          COALESCE(m."isSubmenu", false) AS is_submenu,
+          NULLIF(m.idpadre, 0)          AS id_padre,
+          COALESCE(a.add_register,    false) AS perm_add,
+          COALESCE(a.edit_register,   false) AS perm_edit,
+          COALESCE(a.delete_register, false) AS perm_delete
+        FROM public.menu   m
+        JOIN public.acceso a
+          ON a.id_menu = m.id
+         AND a.id_rol  = $1
+         AND COALESCE(a.activo, true) = true
+        WHERE COALESCE(m.activo, true) = true
+      ),
+      tree AS (
+        SELECT * FROM roots
+        UNION ALL
+        SELECT
+          c.id,
+          c.descripcion,
+          c.icono,
+          COALESCE(c."isSubmenu", false) AS is_submenu,
+          NULLIF(c.idpadre, 0)           AS id_padre,
+          COALESCE(ac.add_register,    t.perm_add)    AS perm_add,
+          COALESCE(ac.edit_register,   t.perm_edit)   AS perm_edit,
+          COALESCE(ac.delete_register, t.perm_delete) AS perm_delete
+        FROM public.menu c
+        JOIN tree t
+          ON t.id = c.idpadre
+        LEFT JOIN public.acceso ac
+          ON ac.id_menu = c.id
+         AND ac.id_rol  = $1
+         AND COALESCE(ac.activo, true) = true
+        WHERE COALESCE(c.activo, true) = true
+      )
+      SELECT
+        id, descripcion, icono, is_submenu, id_padre, perm_add, perm_edit, perm_delete
+      FROM tree
+      ORDER BY COALESCE(id_padre, 0), id
+      `,
+      [idRol],
+    );
+  }
+
+  private signAccessToken(payload: JwtPayload): {
+    token: string;
+    expiresIn: number;
+  } {
+    const expiresInStr = this.cfg.get<string>('JWT_EXPIRES_IN', '15m');
+    const unit = expiresInStr.endsWith('m')
+      ? 60
+      : expiresInStr.endsWith('h')
+        ? 3600
+        : 1;
+    const num = parseInt(expiresInStr, 10);
+    const seconds = Number.isFinite(num) ? num * unit : 900;
+
+    const opts: any = {
+      expiresIn: expiresInStr,
+      secret: this.cfg.get('JWT_SECRET', 'dev-secret'),
+    };
+    const iss = this.cfg.get<string>('JWT_ISSUER')?.trim();
+    const aud = this.cfg.get<string>('JWT_AUDIENCE')?.trim();
+    if (iss) opts.issuer = iss;
+    if (aud) opts.audience = aud;
+
+    const token = this.jwt.sign(payload, opts);
+    return { token, expiresIn: seconds };
   }
 
   async login(dto: LoginDto): Promise<LoginResponse> {
@@ -118,76 +200,24 @@ export class AuthService {
       throw new ForbiddenException('Rol inactivo');
     }
 
-    // 2) Verifica existencia de tablas (singular: public.acceso)
+    // 2) Menú
+    let menuFlat: MenuRow[] = [];
     const reg = await this.ds.query(
       `SELECT to_regclass('public.acceso') AS acceso, to_regclass('public.menu') AS menu;`,
     );
     const haveAcceso = !!reg?.[0]?.acceso;
     const haveMenu = !!reg?.[0]?.menu;
 
-    // 3) Accesos del rol -> menú plano (CTE recursiva: incluye hijos de menús permitidos)
-    let menuFlat: MenuRow[] = [];
     if (u.id_rol && haveAcceso && haveMenu) {
-      menuFlat = await this.ds.query(
-        `
-        WITH RECURSIVE roots AS (
-          -- raíces: menús con acceso explícito para el rol
-          SELECT
-            m.id,
-            m.descripcion,
-            m.icono,
-            COALESCE(m."isSubmenu", false) AS is_submenu,
-            NULLIF(m.idpadre, 0)          AS id_padre,
-            COALESCE(a.add_register,    false) AS perm_add,
-            COALESCE(a.edit_register,   false) AS perm_edit,
-            COALESCE(a.delete_register, false) AS perm_delete
-          FROM public.menu   m
-          JOIN public.acceso a
-            ON a.id_menu = m.id
-           AND a.id_rol  = $1
-           AND COALESCE(a.activo, true) = true
-          WHERE COALESCE(m.activo, true) = true
-        ),
-        tree AS (
-          SELECT * FROM roots
-          UNION ALL
-          -- hijos: se incluyen aunque no tengan fila en acceso;
-          -- si no hay acceso propio, heredan permisos del padre
-          SELECT
-            c.id,
-            c.descripcion,
-            c.icono,
-            COALESCE(c."isSubmenu", false) AS is_submenu,
-            NULLIF(c.idpadre, 0)           AS id_padre,
-            COALESCE(ac.add_register,    t.perm_add)    AS perm_add,
-            COALESCE(ac.edit_register,   t.perm_edit)   AS perm_edit,
-            COALESCE(ac.delete_register, t.perm_delete) AS perm_delete
-          FROM public.menu c
-          JOIN tree t
-            ON t.id = c.idpadre
-          LEFT JOIN public.acceso ac
-            ON ac.id_menu = c.id
-           AND ac.id_rol  = $1
-           AND COALESCE(ac.activo, true) = true
-          WHERE COALESCE(c.activo, true) = true
-        )
-        SELECT
-          id, descripcion, icono, is_submenu, id_padre, perm_add, perm_edit, perm_delete
-        FROM tree
-        ORDER BY COALESCE(id_padre, 0), id
-        `,
-        [u.id_rol],
-      );
+      menuFlat = await this.buildMenuFlat(u.id_rol);
     } else {
       console.warn(
         `[auth] Menú omitido: acceso=${haveAcceso} menu=${haveMenu} (id_rol=${u.id_rol})`,
       );
     }
-
-    // 4) Construir árbol
     const menuTree = this.buildMenuTree(menuFlat);
 
-    // 5) Compat con front anterior (roles)
+    // 3) Rol (compat front)
     const roleItem: RoleItem | null =
       u.id_rol != null || u.rol_descripcion
         ? {
@@ -197,6 +227,16 @@ export class AuthService {
           }
         : null;
 
+    // 4) Token
+    const payload: JwtPayload = {
+      sub: u.id,
+      email: u.email,
+      rol_cod: roleItem?.cod ?? null,
+      rol: roleItem?.desc ?? null,
+    };
+    const { token, expiresIn } = this.signAccessToken(payload);
+
+    // 5) Ruta sugerida
     const next = this.pickNextRoute(u.id_rol, u.rol_descripcion);
 
     return {
@@ -214,6 +254,8 @@ export class AuthService {
       rol_cod: roleItem ? roleItem.cod : null,
       next,
       menu: menuTree,
+      token,
+      expires_in: expiresIn,
     };
   }
 }

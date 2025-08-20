@@ -1,5 +1,3 @@
-// Tipos compartidos entre controller y service
-
 export type RoleItem = { tab: 'ROL'; cod: string; desc: string };
 
 export interface MenuNode {
@@ -22,9 +20,18 @@ export interface LoginResponse {
     social_security_code: string | null;
     status: string | null;
   };
-  roles: RoleItem[]; // compat con tu front
-  rol: string | null; // alias de desc
-  rol_cod: string | null; // alias de cod
-  next: string; // '/admin' | '/empresa' | '/cliente'
-  menu: MenuNode[]; // árbol de menús con permisos
+  roles: RoleItem[];
+  rol: string | null;
+  rol_cod: string | null;
+  next: string;
+  menu: MenuNode[];
+  token: string; // << añadido
+  expires_in: number; // << segundos hasta expiración
+}
+
+export interface JwtPayload {
+  sub: string; // user id
+  email: string;
+  rol_cod: string | null;
+  rol: string | null;
 }
