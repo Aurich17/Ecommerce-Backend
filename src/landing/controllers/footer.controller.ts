@@ -20,12 +20,14 @@ import {
   FooterResponseDto,
   UpdateFooterDto,
 } from '../dto/footer.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - Footer')
 @Controller('landing/footer')
 export class FooterController {
   constructor(private readonly service: FooterService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Obtener footer y datos de contacto' })
   @ApiOkResponse({ type: FooterResponseDto })

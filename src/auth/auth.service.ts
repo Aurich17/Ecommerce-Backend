@@ -31,6 +31,7 @@ type MenuRow = {
   icono: string | null;
   is_submenu: boolean;
   id_padre: number | null;
+  url: string | null;
   perm_add: boolean;
   perm_edit: boolean;
   perm_delete: boolean;
@@ -62,6 +63,7 @@ export class AuthService {
         icon: r.icono,
         isSubmenu: r.is_submenu,
         parentId: r.id_padre,
+        url: r.url,
         perms: {
           add: !!r.perm_add,
           edit: !!r.perm_edit,
@@ -82,52 +84,55 @@ export class AuthService {
   }
 
   private async buildMenuFlat(idRol: number): Promise<MenuRow[]> {
-    // CTE recursiva: incluye hijos de menús permitidos; hijos heredan permisos si no tienen fila en acceso
     return this.ds.query(
       `
-      WITH RECURSIVE roots AS (
-        SELECT
-          m.id,
-          m.descripcion,
-          m.icono,
-          COALESCE(m."isSubmenu", false) AS is_submenu,
-          NULLIF(m.idpadre, 0)          AS id_padre,
-          COALESCE(a.add_register,    false) AS perm_add,
-          COALESCE(a.edit_register,   false) AS perm_edit,
-          COALESCE(a.delete_register, false) AS perm_delete
-        FROM public.menu   m
-        JOIN public.acceso a
-          ON a.id_menu = m.id
-         AND a.id_rol  = $1
-         AND COALESCE(a.activo, true) = true
-        WHERE COALESCE(m.activo, true) = true
-      ),
-      tree AS (
-        SELECT * FROM roots
-        UNION ALL
-        SELECT
-          c.id,
-          c.descripcion,
-          c.icono,
-          COALESCE(c."isSubmenu", false) AS is_submenu,
-          NULLIF(c.idpadre, 0)           AS id_padre,
-          COALESCE(ac.add_register,    t.perm_add)    AS perm_add,
-          COALESCE(ac.edit_register,   t.perm_edit)   AS perm_edit,
-          COALESCE(ac.delete_register, t.perm_delete) AS perm_delete
-        FROM public.menu c
-        JOIN tree t
-          ON t.id = c.idpadre
-        LEFT JOIN public.acceso ac
-          ON ac.id_menu = c.id
-         AND ac.id_rol  = $1
-         AND COALESCE(ac.activo, true) = true
-        WHERE COALESCE(c.activo, true) = true
-      )
+    WITH RECURSIVE tree (
+      id, descripcion, icono, is_submenu, id_padre,
+      perm_add, perm_edit, perm_delete, url
+    ) AS (
       SELECT
-        id, descripcion, icono, is_submenu, id_padre, perm_add, perm_edit, perm_delete
-      FROM tree
-      ORDER BY COALESCE(id_padre, 0), id
-      `,
+        m.id,
+        m.descripcion,
+        m.icono,
+        COALESCE(m."isSubmenu", false) AS is_submenu,
+        NULLIF(m.idpadre, 0)           AS id_padre,
+        COALESCE(a.add_register,    false) AS perm_add,
+        COALESCE(a.edit_register,   false) AS perm_edit,
+        COALESCE(a.delete_register, false) AS perm_delete,
+        m.url
+      FROM public.menu m
+      JOIN public.acceso a
+        ON a.id_menu = m.id
+       AND a.id_rol  = $1
+       AND COALESCE(a.activo, true) = true
+      WHERE COALESCE(m.activo, true) = true
+
+      UNION ALL
+
+      SELECT
+        c.id,
+        c.descripcion,
+        c.icono,
+        COALESCE(c."isSubmenu", false) AS is_submenu,
+        NULLIF(c.idpadre, 0)           AS id_padre,
+        COALESCE(ac.add_register,    t.perm_add)    AS perm_add,
+        COALESCE(ac.edit_register,   t.perm_edit)   AS perm_edit,
+        COALESCE(ac.delete_register, t.perm_delete) AS perm_delete,
+        c.url
+      FROM public.menu c
+      JOIN tree t ON t.id = c.idpadre
+      LEFT JOIN public.acceso ac
+        ON ac.id_menu = c.id
+       AND ac.id_rol  = $1
+       AND COALESCE(ac.activo, true) = true
+      WHERE COALESCE(c.activo, true) = true
+    )
+    SELECT
+      id, descripcion, icono, is_submenu, id_padre,
+      perm_add, perm_edit, perm_delete, url   -- ⬅️ agrega url aquí
+    FROM tree
+    ORDER BY COALESCE(id_padre, 0), id
+    `,
       [idRol],
     );
   }
