@@ -6,6 +6,7 @@ export interface MenuNode {
   icon?: string | null;
   isSubmenu: boolean;
   parentId: number | null;
+  url: string | null; // << añadido
   perms: { add: boolean; edit: boolean; delete: boolean };
   children: MenuNode[];
 }
