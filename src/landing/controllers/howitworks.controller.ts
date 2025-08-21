@@ -25,12 +25,14 @@ import {
   CreateHowItWorksDto,
   UpdateHowItWorksDto,
 } from '../dto/howitworks.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - How It Works')
 @Controller('landing/how-it-works')
 export class HowItWorksController {
   constructor(private readonly service: HowItWorksService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar pasos' })
   @ApiQuery({ name: 'page', required: false })

@@ -25,12 +25,14 @@ import {
   CreateTestimonialDto,
   UpdateTestimonialDto,
 } from '../dto/testimonial.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - Testimonials')
 @Controller('landing/testimonials')
 export class TestimonialsController {
   constructor(private readonly service: TestimonialsService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar testimonios' })
   @ApiQuery({ name: 'page', required: false })
