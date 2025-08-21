@@ -5,11 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ClienteModule } from './clientes/cliente.module';
-import { PaisesModule } from './paises/paises.module';
-import { ProvinciasModule } from './provincias/provincias.module';
-import { CiudadesModule } from './ciudades/ciudades.module';
-import { GenerosModule } from './generos/genero.module';
-import { OcupacionesModule } from './ocupaciones/ocupaciones.module';
 import { AuthModule } from './auth/auth.module';
 import { LandingEncabezadoModule } from './landing/encabezado/landing-encabezado.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
@@ -52,11 +47,6 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
       },
     }),
     ClienteModule,
-    PaisesModule,
-    ProvinciasModule,
-    CiudadesModule,
-    GenerosModule,
-    OcupacionesModule,
     AuthModule,
     LandingEncabezadoModule,
     ImagekitModule,
