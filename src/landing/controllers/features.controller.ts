@@ -22,12 +22,14 @@ import {
 import { FeaturesService } from '../services/features.service';
 import { PagingQueryDto } from '../dto/paging.dto';
 import { CreateFeatureDto, UpdateFeatureDto } from '../dto/feature.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - Features')
 @Controller('landing/features')
 export class FeaturesController {
   constructor(private readonly service: FeaturesService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar características' })
   @ApiQuery({ name: 'page', required: false })

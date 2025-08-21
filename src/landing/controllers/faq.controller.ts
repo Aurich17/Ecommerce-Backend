@@ -22,12 +22,14 @@ import {
 import { FaqService } from '../services/faq.service';
 import { PagingQueryDto } from '../dto/paging.dto';
 import { CreateFaqDto, UpdateFaqDto } from '../dto/faq.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - FAQ')
 @Controller('landing/faq')
 export class FaqController {
   constructor(private readonly service: FaqService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar preguntas frecuentes' })
   @ApiQuery({ name: 'page', required: false })

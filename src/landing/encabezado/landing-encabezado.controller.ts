@@ -6,23 +6,19 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { LandingEncabezadoService } from './landing-encabezado.service';
 import { UpdateLandingEncabezadoDto } from './dto/update-landing-encabezado.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('landing')
-@ApiBearerAuth()
+// @ApiBearerAuth()
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 @Controller('landing/encabezado')
 export class LandingEncabezadoController {
   constructor(private readonly service: LandingEncabezadoService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Obtener contenido del encabezado' })
   async get() {

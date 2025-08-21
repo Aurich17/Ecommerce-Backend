@@ -22,12 +22,14 @@ import {
 import { AudiencesService } from '../services/audiences.service';
 import { PagingQueryDto } from '../dto/paging.dto';
 import { CreateAudienceDto, UpdateAudienceDto } from '../dto/audience.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Landing - Audiences')
 @Controller('landing/audiences')
 export class AudiencesController {
   constructor(private readonly service: AudiencesService) {}
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar audiencias' })
   @ApiQuery({ name: 'page', required: false })
