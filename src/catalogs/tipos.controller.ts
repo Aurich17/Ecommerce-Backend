@@ -12,6 +12,7 @@ import {
 import { TiposService } from './tipos.service';
 import { TabParamDto, TabCodParamDto } from './dto/params.dto';
 import { CreateTipoDto } from './dto/create-tipo.dto';
+import { Public } from 'src/auth/public.decorator';
 
 // (Opcional) si ya tienes RolesGuard:
 // import { Roles } from '@/auth/roles.decorator';
@@ -20,6 +21,7 @@ import { CreateTipoDto } from './dto/create-tipo.dto';
 export class TiposController {
   constructor(private readonly service: TiposService) {}
 
+  @Public()
   @Get(':tab')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async getByTab(@Param() { tab }: TabParamDto) {
@@ -27,6 +29,7 @@ export class TiposController {
     return { success: true, data };
   }
 
+  @Public()
   @Get(':tab/:cod')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async getOne(@Param() { tab, cod }: TabCodParamDto) {
