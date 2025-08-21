@@ -10,13 +10,21 @@ import {
 import { ClienteService } from './cliente.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { RegistroCompletoDto } from './dto/registro-completo.dto';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('clientes')
-@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true, // 👈 importante
+  }),
+)
 @Controller('clientes')
 export class ClienteController {
   constructor(private readonly servicio: ClienteService) {}
 
+  @Public()
   @Post('registro-completo') // ← usa UNA sola ruta (o duplica a propósito)
   @ApiOperation({ summary: 'Registrar cliente completo (PL/pgSQL)' })
   @ApiBody({ type: RegistroCompletoDto })

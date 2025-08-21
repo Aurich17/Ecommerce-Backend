@@ -10,7 +10,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImagekitService } from './imagekit.service';
+import { Public } from 'src/auth/public.decorator';
 
+@Public()
 @Controller('imagekit')
 export class ImagekitController {
   constructor(private readonly ik: ImagekitService) {}
@@ -58,19 +60,6 @@ export class ImagekitController {
         'Envía multipart con "file" o JSON con {fileId, url, ...}.',
       );
     }
-
-    // (Opcional) persistir en BD:
-    // const saved = await this.media.create({
-    //   fileId: res.fileId,
-    //   url: res.url,
-    //   thumbnailUrl: res.thumbnailUrl,
-    //   width: res.width,
-    //   height: res.height,
-    //   size: res.size,
-    //   format: res.fileType,
-    //   tags: res.tags,
-    // });
-    // return { ...res, mediaId: saved.id };
 
     return res; // si no persistes aquí
   }
