@@ -31,4 +31,15 @@ export class UpdateLandingEncabezadoDto {
   @IsOptional()
   @IsString()
   nota?: string | null;
+
+  // 👇 NUEVOS CAMPOS PARA EL LOGO
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  logo_url?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  logo_name?: string;
 }
