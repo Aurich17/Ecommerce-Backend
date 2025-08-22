@@ -18,6 +18,8 @@ import { ProductsModule } from './products/products.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { MailModule } from './mail/mail.module';
+import { RolesModule } from './roles/roles.module';
+import { AccesosModule } from './accesos/accesos.module';
 
 @Module({
   imports: [
@@ -59,6 +61,8 @@ import { MailModule } from './mail/mail.module';
     RequestsModule,
     ProductsModule,
     MailModule,
+    RolesModule,
+    AccesosModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
