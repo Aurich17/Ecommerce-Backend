@@ -6,7 +6,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
-import { UserRole } from './entities/user-role.entity';
 import { Tipo } from '../catalogs/tipo.entity';
 import { ListUsersQueryDto } from './dto/list-users.query.dto';
 
@@ -14,12 +13,12 @@ import { ListUsersQueryDto } from './dto/list-users.query.dto';
 export class UsersService {
   constructor(
     @InjectRepository(User) private usersRepo: Repository<User>,
-    @InjectRepository(UserRole) private rolesRepo: Repository<UserRole>,
     @InjectRepository(Tipo) private tiposRepo: Repository<Tipo>,
   ) {}
 
   async list(q: ListUsersQueryDto) {
-    const { page, limit, q: query, roleCod, estCod } = q;
+    const { page, limit, q: query, roleId, estCod } = q;
+
     const qb = this.usersRepo
       .createQueryBuilder('u')
       .leftJoin(
@@ -35,6 +34,7 @@ export class UsersService {
         'u.social_security_code AS "socialSecurity"',
         'u.status AS status',
         'u.created_at AS "createdAt"',
+        'u.id_rol AS "roleId"', // <- expone el id de rol
         'est.tab_tabla AS "accountState_tab"',
         'est.cod_tipo AS "accountState_cod"',
         'est.des_tipo AS "accountState_desc"',
@@ -47,18 +47,14 @@ export class UsersService {
       );
     }
 
+    if (typeof roleId === 'number') {
+      qb.andWhere(`u.id_rol = :roleId`, { roleId });
+    }
+
     if (estCod) {
       qb.andWhere(
         `u.account_state_tab = 'EST' AND u.account_state_cod = :estCod`,
         { estCod },
-      );
-    }
-
-    // Si filtras por rol: asegurar existencia en user_roles
-    if (roleCod) {
-      qb.andWhere(
-        `EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_tab = 'ROL' AND ur.role_cod = :roleCod)`,
-        { roleCod },
       );
     }
 
@@ -68,7 +64,6 @@ export class UsersService {
 
     const [rows, total] = await Promise.all([
       qb.getRawMany(),
-      // total:
       (async () => {
         const countQb = this.usersRepo
           .createQueryBuilder('u')
@@ -80,59 +75,22 @@ export class UsersService {
             { q: `%${query}%` },
           );
         }
+        if (typeof roleId === 'number') {
+          countQb.andWhere(`u.id_rol = :roleId`, { roleId });
+        }
         if (estCod) {
           countQb.andWhere(
             `u.account_state_tab = 'EST' AND u.account_state_cod = :estCod`,
             { estCod },
           );
         }
-        if (roleCod) {
-          countQb.andWhere(
-            `EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_tab = 'ROL' AND ur.role_cod = :roleCod)`,
-            { roleCod },
-          );
-        }
+
         const r = await countQb.getRawOne<{ c: string }>();
         return Number(r?.c ?? 0);
       })(),
     ]);
 
-    // Cargar roles como array para los IDs listados
-    const ids = rows.map((r) => r.id);
-    let rolesByUser: Record<
-      string,
-      { tab: string; cod: string; desc: string }[]
-    > = {};
-    if (ids.length) {
-      const roles = await this.rolesRepo
-        .createQueryBuilder('ur')
-        .innerJoin(
-          Tipo,
-          'rol',
-          `rol.tab_tabla = ur.role_tab AND rol.cod_tipo = ur.role_cod`,
-        )
-        .select([
-          'ur.user_id AS "userId"',
-          'ur.role_tab AS tab',
-          'ur.role_cod AS cod',
-          'rol.des_tipo AS desc',
-        ])
-        .where('ur.user_id IN (:...ids)', { ids })
-        .andWhere(`ur.role_tab = 'ROL'`)
-        .orderBy('"userId"', 'ASC')
-        .addOrderBy('cod', 'ASC')
-        .getRawMany();
-
-      rolesByUser = roles.reduce(
-        (acc, r) => {
-          acc[r.userId] ??= [];
-          acc[r.userId].push({ tab: r.tab, cod: r.cod, desc: r.desc });
-          return acc;
-        },
-        {} as Record<string, { tab: string; cod: string; desc: string }[]>,
-      );
-    }
-
+    // ya no se consulta user_roles; devolvemos roleId y un array vacío de roles (si tu DTO lo pide)
     const items = rows.map((r) => ({
       id: r.id,
       fullName: r.fullName,
@@ -140,7 +98,8 @@ export class UsersService {
       phone: r.phone,
       socialSecurity: r.socialSecurity,
       status: r.status,
-      roles: rolesByUser[r.id] ?? [],
+      roleId: r.roleId, // <- nuevo
+      roles: [], // <- mantiene compatibilidad con respuestas anteriores
       accountState: {
         tab: r.accountState_tab,
         cod: r.accountState_cod,
@@ -168,6 +127,7 @@ export class UsersService {
         'u.social_security_code AS "socialSecurity"',
         'u.status AS status',
         'u.created_at AS "createdAt"',
+        'u.id_rol AS "roleId"', // <- expone el id de rol
         'est.tab_tabla AS "accountState_tab"',
         'est.cod_tipo AS "accountState_cod"',
         'est.des_tipo AS "accountState_desc"',
@@ -177,24 +137,6 @@ export class UsersService {
 
     if (!row) throw new NotFoundException('Usuario no encontrado');
 
-    // roles
-    const roles = await this.rolesRepo
-      .createQueryBuilder('ur')
-      .innerJoin(
-        Tipo,
-        'rol',
-        `rol.tab_tabla = ur.role_tab AND rol.cod_tipo = ur.role_cod`,
-      )
-      .select([
-        'ur.role_tab AS tab',
-        'ur.role_cod AS cod',
-        'rol.des_tipo AS desc',
-      ])
-      .where('ur.user_id = :id', { id })
-      .andWhere(`ur.role_tab = 'ROL'`)
-      .orderBy('cod', 'ASC')
-      .getRawMany();
-
     return {
       id: row.id,
       fullName: row.fullName,
@@ -202,7 +144,8 @@ export class UsersService {
       phone: row.phone,
       socialSecurity: row.socialSecurity,
       status: row.status,
-      roles,
+      roleId: row.roleId, // <- nuevo
+      roles: [], // <- sin user_roles
       accountState: {
         tab: row.accountState_tab,
         cod: row.accountState_cod,
@@ -213,7 +156,6 @@ export class UsersService {
   }
 
   async patchAccountState(id: string, tab: string, cod: string) {
-    // Validar que tab=EST y que el código exista
     if (tab !== 'EST') {
       throw new BadRequestException(`tab debe ser 'EST'`);
     }
@@ -234,7 +176,6 @@ export class UsersService {
       updated_at: new Date(),
     });
 
-    // devolver el detalle actualizado
     return this.getOne(id);
   }
 }
