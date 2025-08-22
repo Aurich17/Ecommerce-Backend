@@ -18,6 +18,9 @@ import { FeaturesService } from './services/features.service';
 import { FooterService } from './services/footer.service';
 import { FooterController } from './controllers/footer.controller';
 import { LandingFooter } from './entities/landing-footer.entity';
+import { LandingSlider } from './entities/landing-slider.entity';
+import { LandingSliderController } from './controllers/landing-slider.controller';
+import { LandingSliderService } from './services/landing-slider.service';
 
 @Module({
   imports: [
@@ -28,6 +31,7 @@ import { LandingFooter } from './entities/landing-footer.entity';
       LandingFaq,
       LandingFeature,
       LandingFooter,
+      LandingSlider,
     ]),
   ],
   controllers: [
@@ -37,6 +41,7 @@ import { LandingFooter } from './entities/landing-footer.entity';
     FaqController,
     FeaturesController,
     FooterController,
+    LandingSliderController,
   ],
   providers: [
     AudiencesService,
@@ -45,6 +50,7 @@ import { LandingFooter } from './entities/landing-footer.entity';
     FaqService,
     FeaturesService,
     FooterService,
+    LandingSliderService,
   ],
 })
 export class LandingModule {}
