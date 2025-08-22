@@ -27,12 +27,13 @@ import {
   ProductDetailResponse,
   ProductsListResponse,
 } from './dto/product.responses';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Productos')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
-
+@Public()
   @Get()
   @ApiOperation({ summary: 'Listar productos (usa vista v_products_list)' })
   @ApiOkResponse({ type: ProductsListResponse })
@@ -46,7 +47,7 @@ export class ProductsController {
     const data = await this.service.list(q);
     return { success: true, data };
   }
-
+@Public()
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de producto' })
   @ApiParam({ name: 'id', example: 1 })
@@ -55,7 +56,7 @@ export class ProductsController {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
   }
-
+@Public()
   @Post()
   @ApiOperation({ summary: 'Crear producto' })
   @ApiCreatedResponse({ type: ProductDetailResponse })
@@ -65,7 +66,7 @@ export class ProductsController {
     const data = await this.service.create(dto);
     return { success: true, data };
   }
-
+@Public()
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar producto' })
   @ApiOkResponse({ type: ProductDetailResponse })
@@ -75,7 +76,7 @@ export class ProductsController {
     const data = await this.service.patch(Number(id), dto);
     return { success: true, data };
   }
-
+@Public()
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar producto' })
   @ApiOkResponse()
