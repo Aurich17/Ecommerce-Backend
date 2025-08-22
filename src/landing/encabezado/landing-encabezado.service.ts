@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LandingEncabezado } from './landing-encabezado.entity';
@@ -37,9 +37,22 @@ export class LandingEncabezadoService {
     return this.ensureRow();
   }
 
-  async update(dto: UpdateLandingEncabezadoDto): Promise<LandingEncabezado> {
-    await this.ensureRow();
-    await this.repo.update({ id: ROW_ID }, dto);
-    return this.repo.findOneByOrFail({ id: ROW_ID });
+  async update(dto: UpdateLandingEncabezadoDto) {
+    const entity = await this.repo.findOne({ where: { id: 1 } }); // o el que toque
+    if (!entity) throw new NotFoundException('Encabezado no encontrado');
+
+    // mapear snake_case (DTO) -> camelCase (Entity)
+    this.repo.merge(entity, {
+      titulo_principal: dto.titulo_principal,
+      subtitulo: dto.subtitulo,
+      parrafo_encabezado: dto.parrafo_encabezado,
+      titulo_marketplace: dto.titulo_marketplace,
+      subtitulo_marketplace: dto.subtitulo_marketplace,
+      nota: dto.nota ?? entity.nota,
+      logoUrl: dto.logo_url ?? entity.logoUrl,
+      logoName: dto.logo_name ?? entity.logoName,
+    });
+
+    return this.repo.save(entity);
   }
 }
