@@ -45,7 +45,7 @@ export class HowItWorksController {
     const data = await this.service.list(q);
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Obtener paso' })
   @ApiParam({ name: 'id', example: 1 })
@@ -54,7 +54,7 @@ export class HowItWorksController {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Post()
   @ApiOperation({ summary: 'Crear paso' })
   @ApiCreatedResponse()
@@ -64,7 +64,7 @@ export class HowItWorksController {
     const data = await this.service.create(dto);
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar paso' })
   @ApiOkResponse()

@@ -51,7 +51,7 @@ export class AudiencesController {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Post()
   @ApiOperation({ summary: 'Crear audiencia' })
   @ApiCreatedResponse()
@@ -61,7 +61,7 @@ export class AudiencesController {
     const data = await this.service.create(dto);
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar audiencia' })
   @ApiOkResponse()
@@ -70,7 +70,7 @@ export class AudiencesController {
     const data = await this.service.patch(Number(id), dto);
     return { success: true, data };
   }
-@Public()
+  @Public()
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar audiencia' })
   @ApiOkResponse()
