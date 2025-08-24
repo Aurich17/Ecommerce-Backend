@@ -55,7 +55,7 @@ export class RequestsController {
   async getOne(@Param('id') id: string) {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
-  }
+  } 
 @Public()
   @Post()
   @ApiOperation({ summary: 'Crear solicitud' })
