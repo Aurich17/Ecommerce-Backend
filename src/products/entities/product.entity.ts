@@ -19,12 +19,6 @@ export class Product {
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   price_amount: string; // usar como string en TypeORM para DECIMAL
 
-  @Column({ type: 'char', length: 3, default: 'MON' })
-  currency_tab: string;
-
-  @Column({ type: 'char', length: 3 })
-  currency_cod: string; // ej. '001' USD
-
   @Column({ type: 'int', default: 0 })
   stock: number;
 

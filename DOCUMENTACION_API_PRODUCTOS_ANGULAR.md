@@ -16,8 +16,7 @@
     "name": "Producto",
     "description": "Desc",
     "price_amount": 99.99,
-    "currency_tab": "USD",
-    "currency_cod": "$",
+    "currency_cod": "001",
     "stock": 50,
     "discount_percent": 10,
     "enabled": true,
@@ -34,11 +33,14 @@
   "sellerUserId": "user123",
   "name": "Producto",
   "description": "Desc",
-  "priceAmount": 99.99,
-  "currencyTab": "USD",
-  "currencyCod": "$",
+  "price": "99.99",
+  "currency": {
+    "tab": "MON",
+    "cod": "001",
+    "desc": "Dólar Estadounidense"
+  },
   "stock": 50,
-  "discountPercent": 10,
+  "discountPercent": "10.00",
   "enabled": true,
   "urlImg": "https://ejemplo.com/img.jpg",
   "createdAt": "2024-01-01T00:00:00.000Z",
@@ -52,9 +54,8 @@
   "sellerUserId": "user123",
   "name": "Producto",
   "description": "Desc",
-  "priceAmount": 149.99,
-  "currencyTab": "USD",
-  "currencyCod": "$",
+  "price": 149.99,
+  "currencyCod": "001",
   "stock": 25,
   "discountPercent": 5,
   "urlImg": "https://ejemplo.com/img.jpg"
@@ -65,7 +66,8 @@
 ```json
 {
   "name": "Producto Actualizado",
-  "priceAmount": 199.99,
+  "price": 199.99,
+  "currencyCod": "002",
   "urlImg": "https://ejemplo.com/nueva-img.jpg"
 }
 ```
@@ -92,7 +94,6 @@ export interface ProductListItem {
   name: string;
   description: string;
   price_amount: number;
-  currency_tab: string;
   currency_cod: string;
   stock: number;
   discount_percent: number;
@@ -105,11 +106,14 @@ export interface ProductDetail {
   sellerUserId: string;
   name: string;
   description: string;
-  priceAmount: number;
-  currencyTab: string;
-  currencyCod: string;
+  price: string;
+  currency: {
+    tab: string;
+    cod: string;
+    desc: string;
+  };
   stock: number;
-  discountPercent: number;
+  discountPercent: string;
   enabled: boolean;
   urlImg: string | null;
   createdAt: string;
@@ -120,9 +124,8 @@ export interface CreateProductDto {
   sellerUserId: string;
   name: string;
   description: string;
-  priceAmount: number;
-  currencyTab: string;
-  currencyCod: string;
+  price: number;
+  currencyCod: string; // Código de 3 dígitos (ej: "001")
   stock: number;
   discountPercent?: number;
   urlImg?: string;
@@ -131,9 +134,8 @@ export interface CreateProductDto {
 export interface UpdateProductDto {
   name?: string;
   description?: string;
-  priceAmount?: number;
-  currencyTab?: string;
-  currencyCod?: string;
+  price?: number;
+  currencyCod?: string; // Código de 3 dígitos (ej: "001")
   stock?: number;
   discountPercent?: number;
   urlImg?: string;
@@ -196,8 +198,11 @@ export class ProductService {
 ```
 
 ## Notas
+- **currencyCod:** Código de moneda de 3 dígitos numéricos (ej: "001", "002")
+- **currency_tab:** Campo eliminado - ya no se usa en la base de datos
 - **url_img:** Campo nuevo nullable para URLs de imágenes
 - **Auth:** Header `Authorization: Bearer <token>`
 - **Soft Delete:** DELETE no elimina físicamente
+- **Cambios recientes:** Se eliminó el campo `currency_tab` de la entidad Product y se corrigió el error de inserción
 - **Paginación:** Usar `page` y `limit`
 - **Filtros:** `sellerUserId` para filtrar por vendedor
