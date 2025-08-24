@@ -39,4 +39,7 @@ export class Product {
 
   @Column({ type: 'timestamptz', default: () => 'now()' })
   updated_at: Date;
+
+  @Column({ type: 'text', nullable: true })
+  url_img: string | null;
 }

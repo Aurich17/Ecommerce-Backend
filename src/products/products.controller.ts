@@ -47,6 +47,25 @@ export class ProductsController {
     return { success: true, data };
   }
 
+  @Get('seller/:sellerId')
+  @ApiOperation({ summary: 'Listar productos por seller_user_id' })
+  @ApiParam({ name: 'sellerId', example: 'uuid-v4' })
+  @ApiOkResponse({ type: ProductsListResponse })
+  @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'enabled', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async listBySeller(
+    @Param('sellerId') sellerId: string,
+    @Query() q: ListProductsQueryDto,
+  ) {
+    // Forzar el sellerId en la query
+    q.sellerUserId = sellerId;
+    const data = await this.service.list(q);
+    return { success: true, data };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Detalle de producto' })
   @ApiParam({ name: 'id', example: 1 })
@@ -73,6 +92,24 @@ export class ProductsController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async patch(@Param('id') id: string, @Body() dto: PatchProductDto) {
     const data = await this.service.patch(Number(id), dto);
+    return { success: true, data };
+  }
+
+  @Patch(':id/disable')
+  @ApiOperation({ summary: 'Desactivar producto (enabled = false)' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiOkResponse({ type: ProductDetailResponse })
+  async disable(@Param('id') id: string) {
+    const data = await this.service.disable(Number(id));
+    return { success: true, data };
+  }
+
+  @Patch(':id/enable')
+  @ApiOperation({ summary: 'Activar producto (enabled = true)' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiOkResponse({ type: ProductDetailResponse })
+  async enable(@Param('id') id: string) {
+    const data = await this.service.enable(Number(id));
     return { success: true, data };
   }
 

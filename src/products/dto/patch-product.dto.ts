@@ -23,4 +23,5 @@ export class PatchProductDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) stock?: number;
   @ApiPropertyOptional() @IsOptional() @Min(0) discountPercent?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() enabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsString() urlImg?: string;
 }

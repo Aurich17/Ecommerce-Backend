@@ -10,6 +10,7 @@ export class ProductListItem {
   @ApiProperty() moneda!: string;
   @ApiProperty() enabled!: boolean;
   @ApiProperty() created_at!: string;
+  @ApiProperty({ nullable: true }) url_img!: string | null;
 }
 export class ProductsListResponse {
   @ApiProperty({ example: true }) success!: true;
@@ -36,6 +37,7 @@ export class ProductDetail {
   @ApiProperty() enabled!: boolean;
   @ApiProperty() createdAt!: string;
   @ApiProperty() updatedAt!: string;
+  @ApiProperty({ nullable: true }) urlImg!: string | null;
 }
 export class ProductDetailResponse {
   @ApiProperty({ example: true }) success!: true;

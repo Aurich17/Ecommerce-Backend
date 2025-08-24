@@ -11,4 +11,5 @@ export class ProductListView {
   @ViewColumn() moneda: string; // 'USD'
   @ViewColumn() enabled: boolean;
   @ViewColumn() created_at: Date;
+  @ViewColumn() url_img: string | null;
 }

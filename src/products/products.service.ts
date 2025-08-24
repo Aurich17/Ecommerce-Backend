@@ -86,6 +86,7 @@ export class ProductsService {
       enabled: p.enabled,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
+      urlImg: p.url_img,
     };
   }
 
@@ -109,6 +110,7 @@ export class ProductsService {
       stock: dto.stock,
       discount_percent: (dto.discountPercent ?? 0).toFixed(2),
       enabled: dto.enabled ?? true,
+      url_img: dto.urlImg ?? null,
     });
 
     const saved = await this.repo.save(ent);
@@ -140,7 +142,28 @@ export class ProductsService {
     if (dto.discountPercent !== undefined)
       p.discount_percent = (dto.discountPercent ?? 0).toFixed(2);
     if (dto.enabled !== undefined) p.enabled = dto.enabled;
+    if (dto.urlImg !== undefined) p.url_img = dto.urlImg ?? null;
 
+    p.updated_at = new Date();
+    await this.repo.save(p);
+    return this.getOne(id);
+  }
+
+  async disable(id: number) {
+    const p = await this.repo.findOne({ where: { id } });
+    if (!p) throw new NotFoundException('Producto no encontrado');
+
+    p.enabled = false;
+    p.updated_at = new Date();
+    await this.repo.save(p);
+    return this.getOne(id);
+  }
+
+  async enable(id: number) {
+    const p = await this.repo.findOne({ where: { id } });
+    if (!p) throw new NotFoundException('Producto no encontrado');
+
+    p.enabled = true;
     p.updated_at = new Date();
     await this.repo.save(p);
     return this.getOne(id);
@@ -149,7 +172,11 @@ export class ProductsService {
   async remove(id: number) {
     const p = await this.repo.findOne({ where: { id } });
     if (!p) throw new NotFoundException('Producto no encontrado');
-    await this.repo.remove(p);
+
+    // Eliminación lógica: desactivar en lugar de eliminar físicamente
+    p.enabled = false;
+    p.updated_at = new Date();
+    await this.repo.save(p);
     return true;
   }
 }
