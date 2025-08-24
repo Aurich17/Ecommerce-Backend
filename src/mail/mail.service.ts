@@ -17,10 +17,10 @@ export class MailService {
 
   async sendMail(to: string, subject: string, text: string) {
     return this.transporter.sendMail({
-      from: '"Mi App" <chumpitazismael7@gmail.com>',
+      from: '"FiaoX" <chumpitazismael7@gmail.com>',
       to,
       subject,
-      text,
+      html: text,
     });
   }
 }

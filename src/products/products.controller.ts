@@ -27,12 +27,13 @@ import {
   ProductDetailResponse,
   ProductsListResponse,
 } from './dto/product.responses';
+import { Public } from 'src/auth/public.decorator';
 
 @ApiTags('Productos')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly service: ProductsService) {}
-
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Listar productos (usa vista v_products_list)' })
   @ApiOkResponse({ type: ProductsListResponse })
@@ -74,7 +75,7 @@ export class ProductsController {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
   }
-
+  @Public()
   @Post()
   @ApiOperation({ summary: 'Crear producto' })
   @ApiCreatedResponse({ type: ProductDetailResponse })
@@ -84,7 +85,7 @@ export class ProductsController {
     const data = await this.service.create(dto);
     return { success: true, data };
   }
-
+  @Public()
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar producto' })
   @ApiOkResponse({ type: ProductDetailResponse })

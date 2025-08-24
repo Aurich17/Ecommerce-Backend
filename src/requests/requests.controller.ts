@@ -26,12 +26,12 @@ import {
   RequestDetailResponse,
   RequestsListResponse,
 } from './dto/request.responses';
-
+import { Public } from 'src/auth/public.decorator';
 @ApiTags('Solicitudes')
 @Controller('requests')
 export class RequestsController {
   constructor(private readonly service: RequestsService) {}
-
+@Public()
   @Get()
   @ApiOperation({
     summary: 'Listar solicitudes (filtros por tipo REQ y estado EST)',
@@ -47,7 +47,7 @@ export class RequestsController {
     const data = await this.service.list(q);
     return { success: true, data };
   }
-
+@Public()
   @Get(':id')
   @ApiOperation({ summary: 'Obtener detalle de una solicitud' })
   @ApiParam({ name: 'id', example: 1 })
@@ -55,8 +55,8 @@ export class RequestsController {
   async getOne(@Param('id') id: string) {
     const data = await this.service.getOne(Number(id));
     return { success: true, data };
-  }
-
+  } 
+@Public()
   @Post()
   @ApiOperation({ summary: 'Crear solicitud' })
   @ApiCreatedResponse({ type: RequestDetailResponse })
@@ -66,7 +66,7 @@ export class RequestsController {
     const data = await this.service.create(dto);
     return { success: true, data };
   }
-
+@Public()
   @Patch(':id/status')
   @ApiOperation({
     summary: 'Cambiar estado de la solicitud (APROBAR/RECHAZAR)',
