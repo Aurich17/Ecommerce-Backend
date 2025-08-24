@@ -20,6 +20,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { MailModule } from './mail/mail.module';
 import { RolesModule } from './roles/roles.module';
 import { AccesosModule } from './accesos/accesos.module';
+import { CurrenciesModule } from './currencies/currencies.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AccesosModule } from './accesos/accesos.module';
     MailModule,
     RolesModule,
     AccesosModule,
+    CurrenciesModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],
