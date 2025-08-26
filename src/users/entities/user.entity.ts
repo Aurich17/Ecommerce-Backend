@@ -23,11 +23,16 @@ export class User {
   @Index()
   social_security_code: string;
 
-  // Estado técnico (habilitado/deshabilitado) – libre
+  // Campo que ya existe en tu BD
+  @Column({ type: 'int4', nullable: true })
+  id_rol: number | null;
+
+  @Column({ type: 'boolean', nullable: true })
+  can_comment: boolean | null;
+
   @Column({ type: 'text', default: 'habilitado' })
   status: string;
 
-  // Estado de cuenta (EST)
   @Column({ type: 'char', length: 3, default: 'EST' })
   account_state_tab: string;
 

@@ -21,11 +21,21 @@ import { CompaniesService } from './companies.service';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { PatchCompanyDto } from './dto/patch-company.dto';
 import { OkCompanyResponse } from './dto/company.responses';
+import { Public } from 'src/auth/public.decorator';
 
+@Public()
 @ApiTags('Empresas')
 @Controller('companies')
 export class CompaniesController {
   constructor(private readonly service: CompaniesService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Listar todas las empresas' })
+  @ApiOkResponse({ description: 'Lista de empresas obtenida exitosamente' })
+  async list() {
+    const data = await this.service.list();
+    return { success: true, data };
+  }
 
   @Post('register')
   @ApiOperation({
@@ -34,9 +44,8 @@ export class CompaniesController {
   @ApiCreatedResponse({ type: OkCompanyResponse })
   @ApiBadRequestResponse({ description: 'Validaciones fallidas' })
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async register(@Body() dto: RegisterCompanyDto) {
-    const data = await this.service.register(dto);
-    return { success: true, data };
+  async registrar(@Body() dto: RegisterCompanyDto) {
+    return this.service.registrarCompleto(dto);
   }
 
   @Get(':userId')

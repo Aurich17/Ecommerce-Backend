@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   BadRequestException,
   ConflictException,
@@ -26,67 +27,59 @@ export class ClientsService {
     @InjectRepository(UserDocument) private docRepo: Repository<UserDocument>,
   ) {}
 
-  // --- helpers ---
   private normalizeName(s: string) {
     return s
       .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .toUpperCase();
   }
-  private sscFromFullName(fullName: string) {
-    const cleaned = this.normalizeName(fullName);
-    const toks = cleaned
-      .split(/\s+/)
-      .filter(Boolean)
-      .filter(
-        (t) =>
-          ![
-            'DE',
-            'DEL',
-            'LA',
-            'LAS',
-            'LOS',
-            'Y',
-            'DA',
-            'DOS',
-            'DAS',
-            'DO',
-          ].includes(t),
-      );
-    const n = toks.length;
-    const a = n >= 1 ? toks[0][0] : 'X';
-    const b = n >= 2 ? toks[1][0] : 'X';
-    const c = n >= 3 ? toks[n - 2][0] : 'X';
-    const d = n >= 1 ? toks[n - 1][0] : 'X';
-    return (a + b + c + d).padEnd(4, 'X');
-  }
-  private async generateUniqueSSC(fullName: string): Promise<string> {
-    const prefix = this.sscFromFullName(fullName);
-    for (let i = 0; i < 50; i++) {
-      const n1 = Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, '0');
-      const n2 = Math.floor(Math.random() * 1000)
-        .toString()
-        .padStart(3, '0');
-      const code = `${prefix}-${n1}-${n2}`;
-      const exists = await this.usersRepo.findOne({
-        where: { social_security_code: code },
-        select: ['id'],
-      });
-      if (!exists) return code;
+
+  private sscFromFullName(fullName: string): string {
+    const normalized = this.normalizeName(fullName);
+    const words = normalized.split(/\s+/).filter((w) => w.length > 0);
+
+    if (words.length === 0) return 'XXX000';
+    if (words.length === 1) {
+      const w = words[0];
+      if (w.length >= 3) return w.substring(0, 3) + '000';
+      return w.padEnd(3, 'X') + '000';
     }
-    throw new ConflictException('No se pudo generar SSC único');
-  }
-  private async assertTipoExists(tab: string, cod: string) {
-    const ok = await this.tiposRepo.findOne({
-      where: { tab_tabla: tab, cod_tipo: cod },
-      select: ['id'],
-    });
-    if (!ok) throw new BadRequestException(`Tipo inexistente (${tab}:${cod})`);
+
+    const first = words[0];
+    const last = words[words.length - 1];
+
+    let prefix = '';
+    if (first.length >= 2) prefix += first.substring(0, 2);
+    else prefix += first.padEnd(2, 'X');
+
+    if (last.length >= 1) prefix += last.substring(0, 1);
+    else prefix += 'X';
+
+    return prefix + '000';
   }
 
-  // --- API ---
+  private async generateUniqueSSC(fullName: string): Promise<string> {
+    const base = this.sscFromFullName(fullName);
+    const prefix = base.substring(0, 3);
+
+    for (let i = 0; i <= 999; i++) {
+      const candidate = prefix + i.toString().padStart(3, '0');
+      const existing = await this.usersRepo.findOne({
+        where: { social_security_code: candidate },
+      });
+      if (!existing) return candidate;
+    }
+
+    throw new Error('No se pudo generar un SSC único');
+  }
+
+  private async assertTipoExists(tab: string, cod: string) {
+    const tipo = await this.tiposRepo.findOne({
+      where: { tab_tabla: tab, cod_tipo: cod },
+    });
+    if (!tipo) throw new BadRequestException(`Tipo ${tab}:${cod} no existe`);
+  }
+
   async register(dto: RegisterClientDto) {
     // Validar combos tipo si vienen
     const checks: [string, string | undefined][] = [
@@ -152,22 +145,20 @@ export class ClientsService {
       });
       await trx.getRepository(ClientProfile).save(prof);
 
-      // 4) documentos
+      // 4) documentos - SOLUCIÓN CORRECTA
       if (dto.documents?.length) {
-        const docs = dto.documents.map((d) =>
-          trx.getRepository(UserDocument).create({
-            user_id: user.id,
-            doc_tab: d.tab,
-            doc_cod: d.cod,
-            storage_path: d.storagePath,
-            filename: d.filename ?? null,
-            mime_type: d.mimeType ?? null,
-            size_bytes: d.sizeBytes ?? null,
-            status: null,
-            notes: null,
-          }),
-        );
-        await trx.getRepository(UserDocument).save(docs);
+        // Mapear los documentos del DTO a los campos reales de UserDocument
+        for (const d of dto.documents) {
+          const userDoc = trx.getRepository(UserDocument).create({
+            cliente_id: parseInt(user.id),
+            // Mapear según el tipo de documento
+            selfie_url:
+              d.tab === 'DOC' && d.cod === '001' ? d.storagePath : null,
+            dni_reverso_url:
+              d.tab === 'DOC' && d.cod === '002' ? d.storagePath : null,
+          });
+          await trx.getRepository(UserDocument).save(userDoc);
+        }
       }
 
       // 5) respuesta (detalle)
@@ -205,7 +196,8 @@ export class ClientsService {
         .andWhere(`ur.role_tab='ROL'`)
         .orderBy('cod', 'ASC')
         .getRawMany(),
-      this.docRepo.find({ where: { user_id: userId } }),
+      // Buscar documentos por cliente_id
+      this.docRepo.find({ where: { cliente_id: parseInt(userId) } }),
       prof.gender_cod
         ? this.tiposRepo.findOne({
             where: { tab_tabla: 'GEN', cod_tipo: prof.gender_cod },
@@ -266,57 +258,80 @@ export class ClientsService {
         : null,
       altContactName: prof.alt_contact_name,
       altContactPhone: prof.alt_contact_phone_e164,
-      documents: docs.map((d) => ({
-        id: d.id,
-        tab: d.doc_tab,
-        cod: d.doc_cod,
-        storagePath: d.storage_path,
-      })),
+      // Mapear documentos de vuelta al formato esperado
+      documents: docs
+        .map((d) => {
+          const documents = [];
+          if (d.selfie_url) {
+            documents.push({
+              tab: 'DOC',
+              cod: '001',
+              storagePath: d.selfie_url,
+            });
+          }
+          if (d.dni_reverso_url) {
+            documents.push({
+              tab: 'DOC',
+              cod: '002',
+              storagePath: d.dni_reverso_url,
+            });
+          }
+          return documents;
+        })
+        .flat(),
     };
   }
 
   async patch(userId: string, body: PatchClientDto) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuario no encontrado');
+
     const prof = await this.clientRepo.findOne({ where: { user_id: userId } });
-    if (!prof) throw new NotFoundException('Perfil de cliente no encontrado');
+    if (!prof) throw new NotFoundException('Perfil no encontrado');
 
-    // Validar tipos si vienen
-    const check = async (tab: string, cod?: string) => {
-      if (cod) await this.assertTipoExists(tab, cod);
+    const set = (field: keyof ClientProfile, value: any) => {
+      if (value !== undefined) (prof as any)[field] = value;
     };
-    await check('GEN', body.gender?.cod);
-    await check('OCU', body.occupation?.cod);
-    await check('PAI', body.country?.cod);
-    await check('REG', body.province?.cod);
-    await check('MUN', body.municipality?.cod);
 
-    // Aplicar parches
-    const set = (k: keyof ClientProfile, v: any) => {
-      (prof as any)[k] = v as never;
-    };
-    if (body.firstName !== undefined) set('first_name', body.firstName);
-    if (body.lastName !== undefined) set('last_name', body.lastName);
-    if (body.address !== undefined) set('address', body.address ?? null);
-    if (body.birthDate !== undefined) set('birth_date', body.birthDate ?? null);
+    // Actualizar campos del perfil - SOLO los que existen en PatchClientDto
+    set('first_name', body.firstName);
+    set('last_name', body.lastName);
+    set('address', body.address);
+    set('birth_date', body.birthDate);
 
-    if (body.gender) {
+    // Validar y actualizar combos
+    if (body.gender !== undefined) {
+      if (body.gender?.cod) await this.assertTipoExists('GEN', body.gender.cod);
       set('gender_tab', 'GEN');
-      set('gender_cod', body.gender.cod ?? null);
+      set('gender_cod', body.gender?.cod ?? null);
     }
-    if (body.occupation) {
+
+    if (body.occupation !== undefined) {
+      if (body.occupation?.cod)
+        await this.assertTipoExists('OCU', body.occupation.cod);
       set('occupation_tab', 'OCU');
-      set('occupation_cod', body.occupation.cod ?? null);
+      set('occupation_cod', body.occupation?.cod ?? null);
     }
-    if (body.country) {
+
+    if (body.country !== undefined) {
+      if (body.country?.cod)
+        await this.assertTipoExists('PAI', body.country.cod);
       set('country_tab', 'PAI');
-      set('country_cod', body.country.cod ?? null);
+      set('country_cod', body.country?.cod ?? null);
     }
-    if (body.province) {
+
+    if (body.province !== undefined) {
+      if (body.province?.cod)
+        await this.assertTipoExists('REG', body.province.cod);
       set('province_tab', 'REG');
-      set('province_cod', body.province.cod ?? null);
+      set('province_cod', body.province?.cod ?? null);
     }
-    if (body.municipality) {
+
+    if (body.municipality !== undefined) {
+      if (body.municipality?.cod)
+        await this.assertTipoExists('MUN', body.municipality.cod);
       set('municipality_tab', 'MUN');
-      set('municipality_cod', body.municipality.cod ?? null);
+      set('municipality_cod', body.municipality?.cod ?? null);
     }
 
     if (body.altContactName !== undefined)

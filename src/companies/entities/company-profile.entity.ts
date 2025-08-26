@@ -3,9 +3,13 @@ import { Entity, Column, PrimaryColumn } from 'typeorm';
 @Entity({ name: 'company_profiles' })
 export class CompanyProfile {
   @PrimaryColumn('uuid')
-  user_id: string; // usuario representante (1:1)
+  user_id: string;
 
   @Column({ type: 'text' }) company_name: string;
+
+  // ✅ AGREGAR ESTE CAMPO
+  @Column({ type: 'varchar', length: 20, unique: true })
+  ruc: string;
 
   @Column({ type: 'char', length: 3, default: 'NEG' })
   business_type_tab: string;

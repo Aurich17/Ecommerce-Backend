@@ -11,12 +11,14 @@ import { UserRole } from '../users/entities/user-role.entity';
 import { Tipo } from '../catalogs/tipo.entity';
 import { CompanyProfile } from './entities/company-profile.entity';
 import { CompanyDocument } from './entities/company-document.entity';
-import { RegisterCompanyDto } from './dto/register-company.dto';
 import { PatchCompanyDto } from './dto/patch-company.dto';
+import { RegisterCompanyDto } from './dto/register-company.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CompaniesService {
   constructor(
+    private readonly dataSource: DataSource,
     private readonly ds: DataSource,
     @InjectRepository(User) private usersRepo: Repository<User>,
     @InjectRepository(UserRole) private rolesRepo: Repository<UserRole>,
@@ -59,8 +61,10 @@ export class CompaniesService {
     const b = n >= 2 ? toks[1][0] : 'X';
     const c = n >= 3 ? toks[n - 2][0] : 'X';
     const d = n >= 1 ? toks[n - 1][0] : 'X';
-    return (a + b + c + d).padEnd(4, 'X');
+    // Cambiar para generar códigos de 4 caracteres como los existentes
+    return (a + b + c + d).substring(0, 4).padEnd(4, 'X');
   }
+
   private async generateUniqueSSC(fullName: string): Promise<string> {
     const prefix = this.sscFromFullName(fullName);
     for (let i = 0; i < 50; i++) {
@@ -70,6 +74,7 @@ export class CompaniesService {
       const n2 = Math.floor(Math.random() * 1000)
         .toString()
         .padStart(3, '0');
+      // Cambiar el formato para que coincida con los existentes: XXXX-XXX-XXX
       const code = `${prefix}-${n1}-${n2}`;
       const exists = await this.usersRepo.findOne({
         where: { social_security_code: code },
@@ -88,83 +93,163 @@ export class CompaniesService {
   }
 
   // --- API ---
-  async register(dto: RegisterCompanyDto) {
-    // Validaciones de tipos requeridos
-    await this.assertTipo('NEG', dto.businessType.cod);
-    await this.assertTipo('PAI', dto.country.cod);
-    await this.assertTipo('REG', dto.province.cod);
-    await this.assertTipo('MUN', dto.municipality.cod);
 
-    return await this.ds.transaction(async (trx) => {
-      // 1) user representante
-      const ssc = await this.generateUniqueSSC(dto.fullName);
-      const user = trx.getRepository(User).create({
-        email: dto.email,
-        password_hash: dto.password, // TODO: hash real
-        full_name: dto.fullName,
-        phone_e164: dto.phone ?? null,
-        social_security_code: ssc,
-        account_state_tab: 'EST',
-        account_state_cod: '001', // Pendiente
-      });
-      try {
-        await trx.getRepository(User).save(user);
-      } catch (e: any) {
-        if (e?.code === '23505')
-          throw new ConflictException('Email o SSC duplicado');
-        throw e;
+  // Función helper para mapear códigos de país alfabéticos a numéricos
+  private mapCountryCode(countryCode: string | undefined): string {
+    if (!countryCode) return '001'; // Default
+
+    // Mapeo de códigos alfabéticos a numéricos
+    const countryMap: Record<string, string> = {
+      COL: '001', // Colombia
+      PER: '002', // Perú
+      ECU: '003', // Ecuador
+      VEN: '004', // Venezuela
+      ARG: '005', // Argentina
+      CHL: '006', // Chile
+      BOL: '007', // Bolivia
+      BRA: '008', // Brasil
+      URY: '009', // Uruguay
+      PRY: '010', // Paraguay
+      // Agregar más países según necesites
+    };
+
+    return countryMap[countryCode.toUpperCase()] || '001';
+  }
+
+  // Función similar para provincias
+  private mapProvinceCode(provinceCode: string | undefined): string {
+    if (!provinceCode) return '001';
+
+    const provinceMap: Record<string, string> = {
+      ANT: '001', // Antioquia
+      BOG: '002', // Bogotá
+      VAL: '003', // Valle del Cauca
+      ATL: '004', // Atlántico
+      SAN: '005', // Santander
+      // Agregar más provincias según necesites
+    };
+
+    return provinceMap[provinceCode.toUpperCase()] || '001';
+  }
+
+  // Función similar para municipios
+  private mapMunicipalityCode(municipalityCode: string | undefined): string {
+    if (!municipalityCode) return '001';
+
+    const municipalityMap: Record<string, string> = {
+      MED: '001', // Medellín
+      BOG: '002', // Bogotá
+      CAL: '003', // Cali
+      BAQ: '004', // Barranquilla
+      BUC: '005', // Bucaramanga
+      // Agregar más municipios según necesites
+    };
+
+    return municipalityMap[municipalityCode.toUpperCase()] || '001';
+  }
+
+  async registrarCompleto(dto: RegisterCompanyDto) {
+    const pwd = dto.password?.trim();
+    if (!pwd) throw new BadRequestException('password requerido');
+
+    // normalizar RUC (sin espacios/guiones). Ajusta si necesitas reglas por país.
+    const rucNorm = (dto.ruc || '').replace(/\s|-/g, '');
+
+    const passwordHash = await bcrypt.hash(pwd, 10);
+    // Generar el social_security_code usando el método existente
+    const socialSecurityCode = await this.generateUniqueSSC(
+      dto.company_name || '',
+    );
+
+    const q = `
+WITH new_user AS (
+  INSERT INTO public.users
+    (id, email, password_hash, full_name, phone_e164, social_security_code, status, id_rol)
+  VALUES (
+    gen_random_uuid(),
+    $12, $13,
+    $1,                       -- full_name = razón social
+    $2,
+    $18,                      -- social_security_code generado
+    'habilitado',
+    COALESCE($16, 2)
+  )
+  RETURNING id, social_security_code
+),
+ins_profile AS (
+  INSERT INTO public.company_profiles (
+    user_id, company_name, ruc,
+    business_type_tab, business_type_cod,
+    country_tab, country_cod,
+    province_tab, province_cod,
+    municipality_tab, municipality_cod,
+    founded_on, employee_count,
+    fiscal_address, city, postal_code, website
+  )
+  SELECT
+    u.id, $1, $7,
+    'NEG', UPPER(TRIM($3)),  -- Cambiar 'BUS' por 'NEG'
+    'PAI', UPPER(TRIM($4)),
+    'REG', UPPER(TRIM($5)),
+    'MUN', UPPER(TRIM($6)),
+    NULLIF($8,'')::date,
+    NULLIF($9::text,'')::int,
+    NULLIF($10,''),
+    NULLIF($11,''),
+    NULLIF($14,''),
+    NULLIF($15,'')
+  FROM new_user u
+),
+ins_docs AS (
+  INSERT INTO public.company_documents (id, user_id, doc_url)
+  SELECT gen_random_uuid(), u.id, d.url
+  FROM new_user u
+  JOIN unnest(COALESCE($17::text[], ARRAY[]::text[])) AS d(url) ON TRUE
+)
+SELECT
+  (SELECT id FROM new_user)                   AS user_id,
+  (SELECT social_security_code FROM new_user) AS social_security_code;
+`;
+
+    // Y en los parámetros:
+    const params = [
+      dto.company_name ?? '', // $1
+      dto.phone_e164 ?? null, // $2
+      dto.business_type_cod ?? null, // $3
+      this.mapCountryCode(dto.country_cod), // $4 - mapear código alfabético a numérico
+      this.mapProvinceCode(dto.province_cod), // $5 - mapear código alfabético a numérico
+      this.mapMunicipalityCode(dto.municipality_cod), // $6 - mapear código alfabético a numérico
+      rucNorm, // $7
+      dto.founded_on ?? null, // $8
+      dto.employee_count ?? null, // $9
+      dto.fiscal_address ?? null, // $10
+      dto.city ?? null, // $11
+      dto.email, // $12
+      passwordHash, // $13
+      dto.postal_code ?? null, // $14
+      dto.website ?? null, // $15
+      dto.role_id ?? 2, // $16
+      dto.doc_urls ?? [], // $17
+      socialSecurityCode, // $18
+    ];
+
+    try {
+      const rows = await this.dataSource.query(q, params);
+      const out = rows?.[0] || rows?.[rows.length - 1] || {};
+      return {
+        user_id: out.user_id,
+        social_security: out.social_security_code,
+      };
+    } catch (err: any) {
+      // email duplicado u otra clave única
+      if (err?.code === '23505') {
+        // si la violación proviene del índice único del RUC, puedes personalizar el mensaje:
+        // if (String(err?.detail || '').toLowerCase().includes('company_profiles_ruc_uniq'))
+        //   throw new ConflictException('El RUC ya está registrado');
+        throw new ConflictException('El email o RUC ya está registrado');
       }
-
-      // 2) rol Empresa
-      await trx.getRepository(UserRole).save({
-        user_id: user.id,
-        role_tab: 'ROL',
-        role_cod: '002', // Empresa
-      });
-
-      // 3) perfil empresa
-      const prof = trx.getRepository(CompanyProfile).create({
-        user_id: user.id,
-        company_name: dto.companyName,
-
-        business_type_tab: 'NEG',
-        business_type_cod: dto.businessType.cod,
-
-        country_tab: 'PAI',
-        country_cod: dto.country.cod,
-        province_tab: 'REG',
-        province_cod: dto.province.cod,
-        municipality_tab: 'MUN',
-        municipality_cod: dto.municipality.cod,
-
-        founded_on: dto.foundedOn ?? null,
-        employee_count: dto.employeeCount ?? null,
-
-        fiscal_address: dto.fiscalAddress ?? null,
-        city: dto.city ?? null,
-        postal_code: dto.postalCode ?? null,
-        website: dto.website ?? null,
-      });
-      await trx.getRepository(CompanyProfile).save(prof);
-
-      // 4) documentos
-      if (dto.documents?.length) {
-        const docs = dto.documents.map((d) =>
-          trx.getRepository(CompanyDocument).create({
-            user_id: user.id,
-            doc_tab: d.tab,
-            doc_cod: d.cod,
-            storage_path: d.storagePath,
-            filename: d.filename ?? null,
-            mime_type: d.mimeType ?? null,
-            size_bytes: d.sizeBytes ?? null,
-          }),
-        );
-        await trx.getRepository(CompanyDocument).save(docs);
-      }
-
-      return await this.getOne(user.id);
-    });
+      throw err;
+    }
   }
 
   async getOne(userId: string) {
@@ -252,11 +337,74 @@ export class CompaniesService {
       website: prof.website,
       documents: docs.map((d) => ({
         id: d.id,
-        tab: d.doc_tab,
-        cod: d.doc_cod,
-        storagePath: d.storage_path,
+        url: d.doc_url, // ✅ Usar el campo que realmente existe
       })),
     };
+  }
+
+  async list() {
+    const query = this.ds
+      .createQueryBuilder()
+      .select([
+        'cp.user_id AS userId',
+        'cp.company_name AS companyName',
+        'cp.business_type_tab AS businessTypeTab',
+        'cp.business_type_cod AS businessTypeCod',
+        'cp.country_tab AS countryTab',
+        'cp.country_cod AS countryCod',
+        'cp.province_tab AS provinceTab',
+        'cp.province_cod AS provinceCod',
+        'cp.municipality_tab AS municipalityTab',
+        'cp.municipality_cod AS municipalityCod',
+        'cp.founded_on AS foundedOn',
+        'cp.employee_count AS employeeCount',
+        'cp.fiscal_address AS fiscalAddress',
+        'cp.city AS city',
+        'cp.postal_code AS postalCode',
+        'cp.website AS website',
+        'cp.created_at AS createdAt',
+        'cp.updated_at AS updatedAt',
+        'u.email AS email',
+        'u.phone_e164 AS phone',
+      ])
+      .from(CompanyProfile, 'cp')
+      .leftJoin(User, 'u', 'u.id = cp.user_id')
+      .orderBy('cp.created_at', 'DESC');
+
+    const results = await query.getRawMany();
+
+    return results.map((item) => ({
+      userId: item.userid,
+      companyName: item.companyname,
+      businessType: {
+        tab: item.businesstypetab,
+        cod: item.businesstypecod,
+      },
+      country: {
+        tab: item.countrytab,
+        cod: item.countrycod,
+      },
+      province: {
+        tab: item.provincetab,
+        cod: item.provincecod,
+      },
+      municipality: {
+        tab: item.municipalitytab,
+        cod: item.municipalitycod,
+      },
+      foundedOn: item.foundedon,
+      employeeCount: item.employeecount,
+      fiscalAddress: item.fiscaladdress,
+      city: item.city,
+      postalCode: item.postalcode,
+      website: item.website,
+      createdAt: item.createdat,
+      updatedAt: item.updatedat,
+      contact: {
+        email: item.email,
+        phone: item.phone,
+      },
+    }));
   }
 
   async patch(userId: string, body: PatchCompanyDto) {
