@@ -18,11 +18,16 @@ type DbUserRow = {
   password_hash: string;
   full_name: string;
   phone_e164: string | null;
-  status: string | null;
+  status: string | null; // legacy (si aún existe)
   social_security_code: string | null;
   id_rol: number | null;
   rol_descripcion: string | null;
   rol_activo: boolean | null;
+
+  // ⬇️ NUEVO
+  account_state_tab: string | null;
+  account_state_cod: string | null;
+  est_desc: string | null; // descripción de e_tipos
 };
 
 type MenuRow = {
@@ -170,25 +175,32 @@ export class AuthService {
       throw new BadRequestException('Email y password son requeridos');
     }
 
-    // 1) Usuario + rol
+    // 1) Usuario + rol + estado de cuenta (JOIN a e_tipos)
     const rows: DbUserRow[] = await this.ds.query(
       `
-      SELECT
-        u.id,
-        u.email,
-        u.password_hash,
-        u.full_name,
-        u.phone_e164,
-        u.status,
-        u.social_security_code,
-        u.id_rol,
-        r.descripcion  AS rol_descripcion,
-        r.activo       AS rol_activo
-      FROM public.users u
-      LEFT JOIN public.rol r ON r.id = u.id_rol
-      WHERE lower(u.email) = lower($1)
-      LIMIT 1
-      `,
+    SELECT
+      u.id,
+      u.email,
+      u.password_hash,
+      u.full_name,
+      u.phone_e164,
+      u.status,
+      u.social_security_code,
+      u.id_rol,
+      r.descripcion  AS rol_descripcion,
+      r.activo       AS rol_activo,
+      u.account_state_tab,
+      u.account_state_cod,
+      t.des_tipo     AS est_desc
+    FROM public.users u
+    LEFT JOIN public.rol r
+      ON r.id = u.id_rol
+    LEFT JOIN public.e_tipos t
+      ON t.tab_tabla = u.account_state_tab
+     AND t.cod_tipo  = u.account_state_cod
+    WHERE lower(u.email) = lower($1)
+    LIMIT 1
+    `,
       [email],
     );
 
@@ -198,9 +210,12 @@ export class AuthService {
     const ok = await bcrypt.compare(password, u.password_hash);
     if (!ok) throw new UnauthorizedException('Credenciales inválidas');
 
-    if (u.status && u.status.toLowerCase() !== 'habilitado') {
-      throw new ForbiddenException(`Usuario ${u.status}`);
-    }
+    // ⛔️ YA NO BLOQUEAMOS POR ESTADO
+    // const estTab = u.account_state_tab ?? 'EST';
+    // const estCod = u.account_state_cod ?? '001';
+    // const estDesc = (u.est_desc ?? '').toUpperCase();
+    // if (estTab === 'EST' && estCod !== '002') { ... ForbiddenException ... }
+
     if (u.rol_activo === false) {
       throw new ForbiddenException('Rol inactivo');
     }
@@ -244,6 +259,7 @@ export class AuthService {
     // 5) Ruta sugerida
     const next = this.pickNextRoute(u.id_rol, u.rol_descripcion);
 
+    // 6) Respuesta con accountState (info) pero sin bloquear
     return {
       auth_ok: true,
       user: {
@@ -252,9 +268,15 @@ export class AuthService {
         email: u.email,
         phone_e164: u.phone_e164,
         social_security_code: u.social_security_code,
+        accountState: {
+          tab: u.account_state_tab ?? 'EST',
+          cod: u.account_state_cod ?? '001',
+          desc: u.est_desc ?? '',
+        },
+        // 'status' legacy, lo dejamos por compat si lo usas en el front
         status: u.status,
       },
-      roles: roleItem ? [roleItem] : ([] as RoleItem[]),
+      roles: roleItem ? [roleItem] : [],
       rol: roleItem ? roleItem.desc : null,
       rol_cod: roleItem ? roleItem.cod : null,
       next,

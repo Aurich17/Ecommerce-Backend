@@ -11,7 +11,7 @@ export interface MenuNode {
   children: MenuNode[];
 }
 
-export interface LoginResponse {
+export type LoginResponse = {
   auth_ok: boolean;
   user: {
     id: string;
@@ -20,15 +20,16 @@ export interface LoginResponse {
     phone_e164: string | null;
     social_security_code: string | null;
     status: string | null;
+    accountState?: { tab: string; cod: string; desc: string }; // 👈 agregar
   };
   roles: RoleItem[];
   rol: string | null;
   rol_cod: string | null;
   next: string;
   menu: MenuNode[];
-  token: string; // << añadido
-  expires_in: number; // << segundos hasta expiración
-}
+  token: string;
+  expires_in: number;
+};
 
 export interface JwtPayload {
   sub: string; // user id

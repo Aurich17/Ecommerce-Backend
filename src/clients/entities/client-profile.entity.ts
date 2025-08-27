@@ -1,9 +1,14 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+// client-profile.entity.ts
+import { Entity, PrimaryColumn, Column, Generated } from 'typeorm';
 
 @Entity({ name: 'client_profiles' })
 export class ClientProfile {
-  @PrimaryColumn('uuid')
-  user_id: string;
+  @PrimaryColumn('uuid', { name: 'user_id' })
+  user_id: string; // sigue siendo el PK
+
+  @Column({ type: 'int', name: 'id' })
+  @Generated('increment') // autoincrement
+  id: number;
 
   @Column({ type: 'text' }) first_name: string;
   @Column({ type: 'text' }) last_name: string;

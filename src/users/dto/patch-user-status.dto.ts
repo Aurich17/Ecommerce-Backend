@@ -1,12 +1,9 @@
+import { IsString, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsIn } from 'class-validator';
 
 export class PatchUserStatusDto {
-  @ApiProperty({
-    example: 'habilitado',
-    description: 'Estado del usuario: habilitado, deshabilitado, etc.',
-  })
+  @ApiProperty({ example: '001', description: 'Código de estado (tabla EST)' })
   @IsString()
-  @IsIn(['habilitado', 'deshabilitado', 'suspendido'])
-  status!: string;
+  @Length(1, 3)
+  status!: string; // 001 | 002 | 003 ...
 }

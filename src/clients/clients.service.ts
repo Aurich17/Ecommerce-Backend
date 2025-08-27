@@ -147,18 +147,21 @@ export class ClientsService {
 
       // 4) documentos - SOLUCIÓN CORRECTA
       if (dto.documents?.length) {
-        // Mapear los documentos del DTO a los campos reales de UserDocument
+        let selfie: string | null = null;
+        let dniRev: string | null = null;
+
         for (const d of dto.documents) {
-          const userDoc = trx.getRepository(UserDocument).create({
-            cliente_id: parseInt(user.id),
-            // Mapear según el tipo de documento
-            selfie_url:
-              d.tab === 'DOC' && d.cod === '001' ? d.storagePath : null,
-            dni_reverso_url:
-              d.tab === 'DOC' && d.cod === '002' ? d.storagePath : null,
-          });
-          await trx.getRepository(UserDocument).save(userDoc);
+          if (d.tab === 'DOC' && d.cod === '001')
+            selfie = d.storagePath ?? null;
+          if (d.tab === 'DOC' && d.cod === '002')
+            dniRev = d.storagePath ?? null;
         }
+
+        await trx.getRepository(UserDocument).save({
+          user_id: user.id, // <- era cliente_id/parseInt(user.id)
+          selfie_url: selfie,
+          dni_reverso_url: dniRev,
+        });
       }
 
       // 5) respuesta (detalle)
@@ -197,7 +200,7 @@ export class ClientsService {
         .orderBy('cod', 'ASC')
         .getRawMany(),
       // Buscar documentos por cliente_id
-      this.docRepo.find({ where: { cliente_id: parseInt(userId) } }),
+      this.docRepo.find({ where: { user_id: userId } }),
       prof.gender_cod
         ? this.tiposRepo.findOne({
             where: { tab_tabla: 'GEN', cod_tipo: prof.gender_cod },
