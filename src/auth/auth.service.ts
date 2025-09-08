@@ -340,7 +340,10 @@ export class AuthService {
     );
 
     // 5) Construir link
-    const appUrl = this.cfg.get<string>('APP_URL', 'http://localhost:4200');
+    const appUrl = this.cfg.get<string>(
+      'APP_URL',
+      'https://ecommerce-frontend-kohl-gamma.vercel.app',
+    );
     const resetUrl = `${appUrl}/resetpassword?token=${rawToken}`;
 
     // 6) Email (HTML simple)
